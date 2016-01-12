@@ -1,0 +1,196 @@
+Title         : PE433 题解
+Author        : zball
+Affiliation   : Some phasianus colchicus High School
+Email         : tmzbot@yeah.net
+Colorizer     : javascript
+Bib style     : plainnat
+Bibliography  : example
+Logo          : False
+
+Doc class     : [10pt]article
+Math Mode     : mathjax
+
+[TITLE]
+
+[TOC]
+
+#题面
+我们记对于欧几里得算法$\gcd (x,y)$迭代的次数为$E(x,y)$.即,
+
+~ Equation { #eq-defE }
+E(x,y)=\begin{cases}
+  0&,~y=0\\
+  E(y,x \bmod x)+1&,~y\not = 0
+\end{cases}
+~
+定义它的和
+
+~ Equation { #eq-defS }
+S(n)=\sum_{0\le x,y\le n}E(x,y)
+~
+容易验证,$S(10)=221,S(100)=39826$.
+
+求$S\big(5\times 10^6\big)$.
+
+#做法
+##暴力1 { #BF-1 }
+###详细
+根据定义计算.
+
+由于每次迭代都会将`sum+=1`,那么通过答案我们能很方便地得出这个算法的一个总运行时间.
+
+假设一台10线程3GHz,每迭代5周期地跑这个程序大约会在8h内出解.
+
+因为问题的性质几乎可以完美地分布式计算.
+
+###时间复杂度
+$O\big(n^2 \log{n} \big)$.数量级大约在$10^{15}$周期左右.
+
+##暴力2 `[by 毕姥爷]` { #BF-2 }
+###详细
+我们发现,通过翻转求的顺序可以显然地将它转换为$O\big(n^2\big)$的dfs.
+
+###时间复杂度
+$O\big(n^2\big)$.数量级在$2\times 10^{13}$次附近.
+
+##简单的快速算法 `[by zielaj]` { #F-1 }
+~ Note
+  简单的意思是无需过多的有关欧几里得算法分析的知识.
+~
+
+###详细
+给出两个辅助函数,$A(a,b,c)$和$B(a,b,c)$,其中
+~ Equation { #eq-defA }
+A(a,b,c)=\sum_{ (x,y),ax+by\le n}(c+E(x,y))
+~
+~ Equation { #eq-defB }
+B(a,b,c)=\sum_{ (x,y),ax+by\le n,y<x}(c+E(x,y))
+~
+
+~ Note
+感性理解一下,A指的是All,B指的是Below,即对角线下面那一部分,而另一部分可以用这一部分的答案快速得到.
+~
+
+答案$S(n)=2\times B(1,0,0)+\frac{n(n+1)}{2}$.
+
+因为有$E(x,y)=E(x-y,y)$,所以可以直接得到:
+
+$B(a,b,c)=A(a,a+b,c)\\ A(a,b,c)=B(a,b,c)+B(b,a,c+1)+(c+1)\left\lfloor \frac{N}{a+b}\right\rfloor$
+
+我们可以递归下去计算.
+
+当A函数中$\frac{N}{b}\le K$($K$是一个人定的界限)的时候,我们根据A的定义暴力计算A的答案.这时候我们需要一些预处理:
+
+枚举符合要求的$y$,那么对于每个$y$我们可以求出$x$的范围,那么我们需要对$\sum_{ax\le n-by}(c+E(x,y))$进行快速求和,而这个可以用前缀和在常数时间内解决.(要是$x>k$怎么办?注意$E(x,y)$是周期的).
+
+###时间复杂度
+这个时间复杂度是可以做到$O\big(n^{4/3}\big)$的. 
+首先来分析预处理前缀和的复杂度: 显然是$O\big(k^2\big)$.
+
+然后我们可以来分析递归计算$B$函数的复杂度了.
+(注意$A$函数在代码中可以被省略到$B$函数内)
+
+注意在$A$函数中,$b$永远大于等于$a$,而$A$函数与调用它的$B$函数一一对应,
+在$B$函数中$(a,b)$的值单射$c$的值,那么在$A$中$(a,b)\mapsto c$.
+
+因此我们只需要分析可能的$(a,b)$二元组的个数.因为$b\ge a$且当
+$\frac{n}{b}\le K$时会暴力计算停止递归,那么$b\le \frac{n}{k}$,
+所以可能的二元组个数为最多$O\Big(\left( n/k\right)^2\Big)$个.
+假设所有的二元组都需要暴力计算,因为每次计算复杂度为$O(k)$的,
+那么总复杂度是$O\big(n^2/k\big)$.
+
+假设$k=n^{v}$,那么我们要求$f(v)=n^{2v}+n^{2-v}$最小.
+对这个函数求导可得$f'(x)=(2n^{2v}-n^{2-v})\ln{n}$.
+抛去常数项$\ln{n}$与$\log_n{2}$(前面那个不影响结果,后面那个太小了),
+留下来$g(v)=2n^{2v}-n^{2-v}$.
+显然这个函数是单调递增的,我们要求$g(v)=0$,即$2v=2-v$,那么$v=2/3$.
+这样$k=n^{2/3}$,那么时间复杂度为$O\big(n^{4/3}\big)$.
+
+###代码
+~ Example {caption:"快速算法1"}
+
+```cpp
+#include "../PElib/pe.h"
+#define maxk 8192
+///注意这个k值的设定使用的空间达到8GiB左右
+///为了能在我的老爷机上跑出来只能设置成这样了
+namespace solver_433_RS43{
+	int n,k;
+	ll Step[maxk][maxk];
+	inline int erk(int p){
+		return int(pow(p,2./3.));
+	}
+	inline ll euclid(int x,int y){
+		if(y==0)return 0;
+		if(Step[y][x])return Step[y][x];
+		return Step[y][x]=1+euclid(y,x%y);
+	}
+	inline void init(){
+		scanf("%d",&n);
+		k=erk(n);
+		if(k>=maxk)k=maxk;
+		
+		for(int i=1;i<k;++i){
+			for(int j=1;j<=i;++j){
+				euclid(j,i);
+			}
+		}
+		
+		for(int i=1;i<k;++i){
+			ll*p=Step[i];
+			for(int j=2;j<=i;++j){
+				p[j]+=p[j-1];
+			}
+		}
+	}
+	inline ll Below(int a,int b,int c){
+		b+=a;
+		int maxy=(n-a)/b;
+		if(maxy>=k){
+			return Below(a,b,c)+Below(b,a,c+1)+ll(n/(a+b))*(c+1);
+		}
+		ll tot(0);
+		for(int y=1;y<=maxy;++y){
+			int maxx=(n-y*b)/a;
+			tot+=maxx*c+Step[y][y]*(maxx/y)+Step[y][maxx%y];
+		}
+		return tot;
+	}
+	inline void work(){
+		ll totot=Below(1,0,0);
+		printf("%lld\n",totot*2+((ll(n)*(n+1))>>1));
+	}
+}using namespace solver_433_RS43;
+int main(){
+	init();
+	work();
+	return 0;
+}
+```
+~
+
+##另一个角度的优秀算法 `[by Endagorion]` { #F-2 }
+###详细
+让我们重新考虑要求的东西是个什么.从[BF-2](暴力2)的答案树出发,
+统计每个父节点对子节点的总贡献,我们发现,对于每个$x>y$,它对它所有儿子的总贡献是
+二元组$(a,b),ax+by\le n,a\ge b\text{且}\gcd{(a,b)}=1$的个数.那么总答案
+就应该是四元组$(a,x,b,y),ax+by\le n,a\ge b,x>y,\gcd (a,b)=1$的个数了.
+
+记
+
+$f(k)=\Big| \big\{(a,x,b,y)\big|ax+by\le k,x>y,a\ge b\big\} \Big|\\ g(k)=\Big| \big\{(a,x,b,y)\big|ax+by\le k,x>y,a\ge b,\gcd (a,b)=1\big\} \Big|$
+
+可以看出
+
+~ Equation { #Eq-factor-additive }
+f(k)=\sum_{1\le x \le k}g\left(\left\lfloor\frac{k}{x}\right\rfloor\right)
+~
+
+因此
+
+~ Equation
+g(x)=\sum_{1\le k\le x}\mu(k)f\Big(\left\lfloor \frac{x}{k}\right\rfloor\Big)
+~
+~ invisible
+  答案:326624372659664
+~
