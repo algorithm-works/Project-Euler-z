@@ -171,7 +171,7 @@ int main(){
 
 ##另一个角度的优秀算法 `[by Endagorion]` { #F-2 }
 ###详细
-让我们重新考虑要求的东西是个什么.从[BF-2](暴力2)的答案树出发,
+让我们重新考虑要求的东西是个什么.从[(暴力2)][#BF-2]的答案树出发,
 统计每个父节点对子节点的总贡献,我们发现,对于每个$x>y$,它对它所有儿子的总贡献是
 二元组$(a,b),ax+by\le n,a\ge b\text{且}\gcd{(a,b)}=1$的个数.那么总答案
 就应该是四元组$(a,x,b,y),ax+by\le n,a\ge b,x>y,\gcd (a,b)=1$的个数了.
@@ -183,13 +183,46 @@ $f(k)=\Big| \big\{(a,x,b,y)\big|ax+by\le k,x>y,a\ge b\big\} \Big|\\ g(k)=\Big| \
 可以看出
 
 ~ Equation { #Eq-factor-additive }
-f(k)=\sum_{1\le x \le k}g\left(\left\lfloor\frac{k}{x}\right\rfloor\right)
+f(k)=\sum_{1\le x \le k}g\Big(\frac{k}{x}\Big)
 ~
 
-因此
+因此[(证明见这里)][#APP1]
 
 ~ Equation
-g(x)=\sum_{1\le k\le x}\mu(k)f\Big(\left\lfloor \frac{x}{k}\right\rfloor\Big)
+g(x)=\sum_{1\le k\le x}\mu(k)f\Big(\frac{x}{k}\Big)
+~
+
+因此我们只需要求出$f(k)$即可.
+
+
+
+#Appendix 1: 这个反演的证明 { @h1:"A"; #APP1 }
+~ Theorem { #th-inversion; caption:"另一种形式的Möbius反演" }
+对于函数$f(x),g(x)$,若
+
+$f(x)=\sum\limits_{1\le i\le x}g\big( \frac{x}{i}\big)$
+
+则
+
+$g(x)=\sum\limits_{1\le i\le x}\mu(i)f\big( \frac{x}{i} \big)$
+~
+~ Proof {caption:"通过改变求和顺序"}
+
+~~ Equation
+\begin{aligned}
+      &\mathrel{\phantom{=}}\sum_{1\le i\le x}\mu(i)f\Big( \frac{x}{i} \Big)\\
+      &=\sum_{1\le n\le x}\mu(n)\sum_{1\le m\le x/n}g\Big(\frac{x}{mn}\Big)\\
+      &=\sum_{1\le n\le x}\mu(n)\sum_{1\le m\le x/n}\sum_{1\le r\le x}[r=mn]g\Big(\frac{x}{r}\Big)\\
+      &=\sum_{1\le r\le x}g\Big(\frac{x}{r}\Big)\sum_{n\backslash r}\mu(n)\\
+      &=\sum_{1\le r\le x}g\Big(\frac{x}{r}\Big)\epsilon(r)\\
+      &=g(x)
+\end{aligned}
+~~
+
+~
+
+~ Note
+$\epsilon(x)=\begin{cases}1,&x=1\\0,&\text{otherwise}\end{cases}$,在Dirichlet卷积的意义下是函数群的单位元.
 ~
 ~ invisible
   答案:326624372659664
